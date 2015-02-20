@@ -227,7 +227,7 @@
       shell: |
         nodes=$(pcs status | grep ^Online | sed -e 's/.*\[ //g' -e 's/ \].*//g' -e 's/ /,/g')
         pcs resource create galera galera enable_creation=true \
-          wsrep_cluster_address="gcomm://$nodes" meta master-max=3 \
+          wsrep_cluster_address="gcomm://$nodes" meta master-max={{groups.controllers|length}} \
           ordered=true op promote timeout=300s on-fail=block  --master
 
 - hosts: controllers
@@ -459,7 +459,7 @@
     - name: create neutron-scale resource
       command: >
         pcs resource create neutron-scale ocf:neutron:NeutronScale
-          clone globally-unique=true clone-max=3 interleave=true
+          clone globally-unique=true clone-max={{groups.controllers|length}} interleave=true
     - name: wait for neutron-scale to start on all nodes
       shell: |
         while pcs status xml |
