@@ -26,20 +26,40 @@
 # ** BEFORE YOU BEGIN **
 #
 # You must update your system configuration to point at RHEL-OSP 6 package
-# repositories, using either  subscription-manager or some other appropriate
+# repositories, using either subscription-manager or some other appropriate
 # tool.
 
-- hosts: controllers
+- hosts: controllers[0]
   tags:
     - pre-check
   tasks:
     # This verifies that pacemaker is responding
     - name: verify that pacemaker is operational
       command: pcs status
+    # This checks that all top-level resources are active, and that all
+    # resource containers (resource groups, clones, etc) have at least one
+    # active resource.
+    - name: checking for inactive resources
+      shell: |
+        tmpfile=$(mktemp xmlXXXXXX)
+        trap "rm -f $tmpfile" EXIT
+
+        pcs status xml > $tmpfile
+        xmllint --xpath '/crm_mon/resources/*/@id' $tmpfile | tr ' ' '\n'| cut -f2 -d'"' |
+        while read id; do
+          [ "$id" ] || continue
+          if ! xmllint --xpath "/crm_mon/resources/*[@id='$id' and @active='true']|/crm_mon/resources/*[@id='$id']/*[@active='true']" $tmpfile > /dev/null 2>&1; then
+            echo "$id: no active resources" >&2
+            exit 1
+          fi
+        done
     # This ensures that the database is running and that we have
     # appropriate credentials available.
     - name: verify that database is operational
       command: mysql -e "select 1"
+    # This verifies that keystone is up and running
+    - name: verify that keystone is operational
+      shell: . /root/keystonerc_admin && keystone token-get
 
 - hosts: all
   tasks:
@@ -509,10 +529,7 @@
     - post-check
   tasks:
     # make sure that everything that we disabled at the beginning of
-    # this playbook has been re-enabled.  Specifically, this checks
-    # that all top-level resources are active, and that all clones,
-    # resource groups, and other containers contain at least one
-    # active resource.
+    # this playbook has been re-enabled.
     - name: checking for inactive resources
       shell: |
         tmpfile=$(mktemp xmlXXXXXX)
