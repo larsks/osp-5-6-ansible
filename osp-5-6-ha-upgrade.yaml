@@ -23,6 +23,17 @@
 # 
 #     ansible-playbook -i hosts osp-5-6-ha-upgrade.yaml
 #
+# You can run specific sections of the playbook through the use of
+# Ansible's "tags" feature.  For example, to run just the pre-check
+# plays:
+#
+#     ansible-playbook -i hosts osp-5-6-ha-upgrade.yaml -t pre-check
+#
+# You can also *skip* specific sections of the playbook using the
+# `--skip-tags` option.  For example, to *skip* the pre-check:
+#
+#     ansible-playbook -i hosts osp-5-6-ha-upgrade.yaml --skip-tags pre-check
+#
 # ## A note about this documentation
 #
 # This documentation was generated automatically from the Ansible
