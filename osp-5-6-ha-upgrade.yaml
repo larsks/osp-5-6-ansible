@@ -36,10 +36,6 @@
     # This verifies that pacemaker is responding
     - name: verify that pacemaker is operational
       command: pcs status
-    # This makes sure all resources are active.
-    - name: checking for inactive resources
-      shell: |
-        ! pcs status xml | xmllint --xpath '//resource[@active="false"]' -
     # This ensures that the database is running and that we have
     # appropriate credentials available.
     - name: verify that database is operational
