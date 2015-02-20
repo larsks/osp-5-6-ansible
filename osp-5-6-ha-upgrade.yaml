@@ -442,7 +442,7 @@
         - openstack-heat-api-clone
         - openstack-heat-api-cfn-clone
         - openstack-heat-api-cloudwatch-clone
-        - openstack-heat-engine
+        - heat
     - name: wait for heat to become active
       shell: |
         . /root/keystonerc_admin
