@@ -231,12 +231,7 @@
           ordered=true op promote timeout=300s on-fail=block  --master
     - name: wait for database to become active
       shell: |
-        start=$(date +%s)
-        until mysql -e 'select 1'; do
-          now=$(date +%s)
-          [ $((now-start)) -ge 300 ] && exit 1
-          sleep 1
-        done
+        timeout 300 sh -c 'until mysql -e "select 1"; do sleep 1; done'
 
 - hosts: controllers
   tags:
@@ -310,12 +305,7 @@
     - name: wait for keystone to become active
       shell: |
         . /root/keystonerc_admin
-        start=$(date +%s)
-        until keystone token-get; do
-          now=$(date +%s)
-          [ $((now-start)) -ge 300 ] && exit 1
-          sleep 1
-        done
+        timeout 300 sh -c 'until keystone token-get; do sleep 1; done'
 
 - hosts: controllers[0]
   tags:
@@ -342,13 +332,7 @@
     - name: wait for glance to become active
       shell: |
         . /root/keystonerc_admin
-        start=$(date +%s)
-        until glance image-list; do
-          now=$(date +%s)
-          [ $((now-start)) -ge 300 ] && exit 1
-          sleep 1
-        done
-
+        timeout 300 sh -c 'until glance image-list; do sleep 1; done'
 
 - hosts: controllers[0]
   tags:
@@ -377,12 +361,7 @@
     - name: wait for cinder to become active
       shell: |
         . /root/keystonerc_admin
-        start=$(date +%s)
-        until cinder list; do
-          now=$(date +%s)
-          [ $((now-start)) -ge 300 ] && exit 1
-          sleep 1
-        done
+        timeout 300 sh -c 'until cinder list; do sleep 1; done'
 
 - hosts: controllers[0]
   tags:
@@ -411,12 +390,7 @@
     - name: wait for nova to become active
       shell: |
         . /root/keystonerc_admin
-        start=$(date +%s)
-        until nova list; do
-          now=$(date +%s)
-          [ $((now-start)) -ge 300 ] && exit 1
-          sleep 1
-        done
+        timeout 300 sh -c 'until nova list; do sleep 1; done'
 
 - hosts: controllers[0]
   tags:
@@ -446,12 +420,7 @@
     - name: wait for heat to become active
       shell: |
         . /root/keystonerc_admin
-        start=$(date +%s)
-        until heat stack-list; do
-          now=$(date +%s)
-          [ $((now-start)) -ge 300 ] && exit 1
-          sleep 1
-        done
+        timeout 300 sh -c 'until heat stack-list; do sleep 1; done'
 
 - hosts: controllers[0]
   tags:
@@ -593,12 +562,7 @@
     - name: wait for neutron to become active
       shell: |
         . /root/keystonerc_admin
-        start=$(date +%s)
-        until neutron net-list; do
-          now=$(date +%s)
-          [ $((now-start)) -ge 300 ] && exit 1
-          sleep 1
-        done
+        timeout 300 sh -c 'until neutron net-list; do sleep 1; done'
 
 - hosts: compute
   tags:
