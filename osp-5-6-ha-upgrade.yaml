@@ -563,6 +563,13 @@
       shell: |
         . /root/keystonerc_admin
         timeout 300 sh -c 'until neutron net-list; do sleep 1; done'
+    # neutron-l3-agent is slow to start.  we wait for it here explicitly to
+    # prevent erroneous failures of the post-check code at the end of the
+    # playbook.
+    - name: wait for neutron-l3-agent to become active
+      shell: |
+        . /root/keystonerc_admin
+        timeout 300 sh -c 'until neutron agent-list | grep "L3 agent.*:-)"; do sleep 1; done'
 
 - hosts: compute
   tags:
