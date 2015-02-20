@@ -488,23 +488,43 @@
           then neutron-server-clone
     - name: enable neutron-server resource
       command: pcs resource enable neutron-server-clone
-    - name: check if neutron agent resource exists
-      shell: crm_resource -q -r {{item}}
+
+    - name: check if neutron-agents resource group exists
+      command: crm_resource -q -r neutron-agents
+      register: neutron_agents_group
+      ignore_errors: true
+    - name: delete neutron-agents resource group
+      command: pcs resource delete neutron-agents
+      when: neutron_agents_group|success
+
+    - name: check if individual neutron agent resources exist
+      command: crm_resource -q -r {{item}}
       with_items:
-        - neutron-agents
-        - neutron-netns-cleanup
-        - neutron-ovs-cleanup
-        - neutron-scale-clone
         - neutron-openvswitch-agent
         - neutron-dhcp-agent
         - neutron-l3-agent
         - neutron-metadata-agent
-      register: agents
+      register: neutron_agents
       ignore_errors: true
-    - name: delete old neutron agent resources
+      when: neutron_agents_group|failed
+    - name: delete individual neutron agent resources
+      command: pcs resource delete {{item.item}}
+      when: neutron_agents_group|failed and item.rc == 0
+      with_items: neutron_agents.results
+
+    - name: check if other neutron resources exist
+      command: crm_resource -q -r {{item}}
+      with_items:
+        - neutron-netns-cleanup
+        - neutron-ovs-cleanup
+        - neutron-scale-clone
+      register: other_neutron
+      ignore_errors: true
+    - name: delete other neutron resources
       shell: pcs resource delete {{item.item}}
       when: item.rc == 0
-      with_items: agents.results
+      with_items: other_neutron.results
+
     # The neutron-scale resource is responsible for setting the
     # DEFAULT/host parameter in neutron configuration files.  We want
     # to first run it on all of our controllers, so we start it with
