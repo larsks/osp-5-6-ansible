@@ -688,6 +688,8 @@
         - neutron-dhcp-agent
         - neutron-l3-agent
         - neutron-metadata-agent
+    # This forces all the neutron resources to colocate with
+    # neutron-scale-clone.
     - name: configure neutron colocation contraints
       shell: |
         pcs constraint colocation add neutron-metadata-agent-clone with neutron-l3-agent-clone
@@ -696,6 +698,8 @@
         pcs constraint colocation add neutron-openvswitch-agent-clone with neutron-netns-cleanup-clone
         pcs constraint colocation add neutron-netns-cleanup-clone with neutron-ovs-cleanup-clone
         pcs constraint colocation add neutron-ovs-cleanup-clone with neutron-scale-clone
+    # This forces neutron resources to start after
+    # neutron-scale-clone.
     - name: configure neutron ordering constraints
       shell: |
         pcs constraint order start neutron-scale-clone then neutron-server-clone
