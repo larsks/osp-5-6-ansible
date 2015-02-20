@@ -4,9 +4,11 @@
 #
 # # RHEL-OSP 5 to RHEL-OSP 6 HA Upgrade
 #
-# This is an Ansible playbook that will upgrade a RHEL-OSP 5 HA environment to
+# This is an [Ansible][] playbook that will upgrade a RHEL-OSP 5 HA environment to
 # RHEL-OSP 6.  Your OpenStack environment will be unavailable for the duration
 # of the upgrade.
+#
+# [ansible]: http://www.ansible.com/
 #
 # In order to use this playbook, you must create a "hosts" file
 # listing your controllers and compute hosts in the following format:
@@ -673,6 +675,10 @@
         pcs resource create neutron-netns-cleanup
           ocf:neutron:NetnsCleanup clone interleave=true
           meta target-role=Stopped
+    # Note that in the following task we are creating new resources
+    # with target-role=Stopped.  This prevents Pacemaker from starting
+    # them immediately; instead, we enable the services after setting
+    # up all the order and colocation constraints.
     - name: create new neutron agent resources
       command: >
         pcs resource create {{item}} systemd:{{item}} clone interleave=true
@@ -755,3 +761,11 @@
           fi
         done
 
+# ## Notes about this playbook
+#
+# I've made heavy use of [xmllint][] in this playbook, in particular
+# its support for [xpath][] queries to parse the various XML output
+# available from Pacemaker commands.
+#
+# [xmllint]: http://xmlsoft.org/xmllint.html
+# [xpath]: http://www.w3.org/TR/xpath/
