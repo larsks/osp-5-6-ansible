@@ -229,6 +229,14 @@
         pcs resource create galera galera enable_creation=true \
           wsrep_cluster_address="gcomm://$nodes" meta master-max={{groups.controllers|length}} \
           ordered=true op promote timeout=300s on-fail=block  --master
+    - name: wait for database to become active
+      shell: |
+        start=$(date +%s)
+        until mysql -e 'select 1'; do
+          now=$(date +%s)
+          [ $((now-start)) -ge 300 ] && exit 1
+          sleep 1
+        done
 
 - hosts: controllers
   tags:
@@ -299,6 +307,15 @@
         pcs resource update openstack-keystone clone interleave=true
     - name: enable keystone resource
       command: pcs resource enable openstack-keystone-clone
+    - name: wait for keystone to become active
+      shell: |
+        . /root/keystonerc_admin
+        start=$(date +%s)
+        until keystone token-get; do
+          now=$(date +%s)
+          [ $((now-start)) -ge 300 ] && exit 1
+          sleep 1
+        done
 
 - hosts: controllers[0]
   tags:
@@ -322,6 +339,16 @@
         - fs-varlibglanceimages-clone
         - openstack-glance-registry-clone
         - openstack-glance-api-clone
+    - name: wait for glance to become active
+      shell: |
+        . /root/keystonerc_admin
+        start=$(date +%s)
+        until glance image-list; do
+          now=$(date +%s)
+          [ $((now-start)) -ge 300 ] && exit 1
+          sleep 1
+        done
+
 
 - hosts: controllers[0]
   tags:
@@ -347,6 +374,15 @@
         - openstack-cinder-api-clone
         - openstack-cinder-scheduler-clone
         - openstack-cinder-volume
+    - name: wait for cinder to become active
+      shell: |
+        . /root/keystonerc_admin
+        start=$(date +%s)
+        until cinder list; do
+          now=$(date +%s)
+          [ $((now-start)) -ge 300 ] && exit 1
+          sleep 1
+        done
 
 - hosts: controllers[0]
   tags:
@@ -372,6 +408,15 @@
     - name: enable nova resources
       command: pcs resource enable {{item}}-clone
       with_items: nova_services
+    - name: wait for nova to become active
+      shell: |
+        . /root/keystonerc_admin
+        start=$(date +%s)
+        until nova list; do
+          now=$(date +%s)
+          [ $((now-start)) -ge 300 ] && exit 1
+          sleep 1
+        done
 
 - hosts: controllers[0]
   tags:
@@ -398,6 +443,15 @@
         - openstack-heat-api-cfn-clone
         - openstack-heat-api-cloudwatch-clone
         - openstack-heat-engine
+    - name: wait for heat to become active
+      shell: |
+        . /root/keystonerc_admin
+        start=$(date +%s)
+        until heat stack-list; do
+          now=$(date +%s)
+          [ $((now-start)) -ge 300 ] && exit 1
+          sleep 1
+        done
 
 - hosts: controllers[0]
   tags:
@@ -516,6 +570,15 @@
         - neutron-dhcp-agent-clone
         - neutron-l3-agent-clone
         - neutron-metadata-agent-clone
+    - name: wait for neutron to become active
+      shell: |
+        . /root/keystonerc_admin
+        start=$(date +%s)
+        until neutron net-list; do
+          now=$(date +%s)
+          [ $((now-start)) -ge 300 ] && exit 1
+          sleep 1
+        done
 
 - hosts: compute
   tags:
