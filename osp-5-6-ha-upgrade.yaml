@@ -392,7 +392,7 @@
           then openstack-keystone-clone
       with_items:
         - galera-master
-        - rabbitmq-server
+        - rabbitmq-server-clone
         - memcached-clone
         - haproxy-clone
     - name: update keystone resource
