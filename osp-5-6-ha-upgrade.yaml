@@ -702,7 +702,7 @@
     # neutron-scale-clone.
     - name: configure neutron ordering constraints
       shell: |
-        pcs constraint order start neutron-scale-clone then neutron-server-clone
+        #pcs constraint order start neutron-scale-clone then neutron-server-clone
         pcs constraint order start neutron-scale-clone then neutron-ovs-cleanup-clone
         pcs constraint order start neutron-ovs-cleanup-clone then neutron-netns-cleanup-clone
         pcs constraint order start neutron-netns-cleanup-clone then neutron-openvswitch-agent-clone
