@@ -274,7 +274,7 @@
 # Now that the configuration files are correct, we delete the old
 # `mysqld` resource and create a new `galera` resource.  Pacemaker
 # will proceed to start this resource, and we wait for the database to
-# become operational before continuining.
+# become operational before continuing.
 - hosts: controllers[0]
   tags:
     - database
@@ -376,7 +376,7 @@
 # ## Update Keystone resource
 #
 # In this step we make some minor changes to the `openstack-keystone`
-# resource, and we add some missing start contraints such that
+# resource, and we add some missing start constraints such that
 # keystone will start *after* basic services (galera, rabbitmq,
 # memcached, haproxy) are up.
 #
@@ -541,7 +541,7 @@
       command: >
         pcs constraint order start openstack-keystone-clone
           then openstack-heat-api-clone
-    - name: enable nova resources
+    - name: enable heat resources
       command: pcs resource enable {{item}}
       with_items:
         - openstack-heat-api-clone
