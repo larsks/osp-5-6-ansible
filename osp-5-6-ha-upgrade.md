@@ -36,6 +36,8 @@ You can also *skip* specific sections of the playbook using the
 
     ansible-playbook -i hosts osp-5-6-ha-upgrade.yaml --skip-tags pre-check
 
+You can skip most the validation steps with `--skip-tags verify`.
+
 ## A note about this documentation
 
 This documentation was generated automatically from the Ansible
@@ -95,7 +97,9 @@ environment is healthy.  Specifically, we check:
           command: mysql -e "select 1"
         # This verifies that keystone is up and running
         - name: verify that keystone is operational
-          shell: . /root/keystonerc_admin && keystone token-get
+          shell: |
+            . /root/keystonerc_admin
+            keystone token-get
     
 ## Basic configuration tasks
 
@@ -109,8 +113,15 @@ existing bugs in the RHEL-OSP 6 packages for RHEL 7.0.
     - hosts: all
       tasks:
         # This is only necessary because there are outstanding selinux bugs in
-        # RHEL-OSP 6 for RHEL 7.0.
+        # RHEL-OSP 6 for RHEL 7.0.  For details, see
+        #
+        #   https://bugzilla.redhat.com/show_bug.cgi?id=1185444
+        #
+        # You can disable this task with `--skip-tags bz1185444`.
         - name: make selinux permissive
+          tag:
+            - bugfix
+            - bz1185444
           command: setenforce 0
     
         # We need to disable Puppet to prevent it from reverting changes to
@@ -336,6 +347,8 @@ become operational before continuing.
               wsrep_cluster_address="gcomm://$nodes" meta master-max={{groups.controllers|length}} \
               ordered=true op promote timeout=300s on-fail=block  --master
         - name: wait for database to become active
+          tags:
+            - verify
           shell: |
             timeout 300 sh -c 'until mysql -e "select 1"; do sleep 1; done'
     
@@ -380,6 +393,8 @@ the resource, and wait for the service to become active.
               set_policy='HA ^(?!amq\.).* {"ha-mode":"all"}'
               clone ordered=true
         - name: wait for rabbitmq to become active
+          tags:
+            - verify
           shell: |
             timeout 300 sh -c 'until rabbitmqctl status; do sleep 1; done'
     
@@ -459,6 +474,8 @@ continuing.
         - name: enable keystone resource
           command: pcs resource enable openstack-keystone-clone
         - name: wait for keystone to become active
+          tags:
+            - verify
           shell: |
             . /root/keystonerc_admin
             timeout 300 sh -c 'until keystone token-get; do sleep 1; done'
@@ -500,6 +517,8 @@ glance to become active before continuing.
             - openstack-glance-registry-clone
             - openstack-glance-api-clone
         - name: wait for glance to become active
+          tags:
+            - verify
           shell: |
             . /root/keystonerc_admin
             timeout 300 sh -c 'until glance image-list; do sleep 1; done'
@@ -540,6 +559,8 @@ active before continuing.
             - openstack-cinder-scheduler-clone
             - openstack-cinder-volume
         - name: wait for cinder to become active
+          tags:
+            - verify
           shell: |
             . /root/keystonerc_admin
             timeout 300 sh -c 'until cinder list; do sleep 1; done'
@@ -580,6 +601,8 @@ active before continuing.
           command: pcs resource enable {{item}}-clone
           with_items: nova_services
         - name: wait for nova to become active
+          tags:
+            - verify
           shell: |
             . /root/keystonerc_admin
             timeout 300 sh -c 'until nova list; do sleep 1; done'
@@ -621,6 +644,8 @@ active before continuing.
             - openstack-heat-api-cloudwatch-clone
             - heat
         - name: wait for heat to become active
+          tags:
+            - verify
           shell: |
             . /root/keystonerc_admin
             timeout 300 sh -c 'until heat stack-list; do sleep 1; done'
@@ -646,9 +671,9 @@ proper URL for testing would be unnecessarily complicated.
           with_items:
             - httpd
         - name: enable httpd resources
-          command: pcs resource enable {{item}}-clone
+          command: pcs resource enable {{item}}
           with_items:
-            - httpd
+            - httpd-clone
     
 ## Update Neutron resources
 
@@ -689,6 +714,7 @@ erroneous failures of the post-check at the end of this playbook).
         - name: enable neutron-server resource
           command: pcs resource enable neutron-server-clone
     
+        # Delete neutron-agents resource group, if it exists.
         - name: check if neutron-agents resource group exists
           command: crm_resource -q -r neutron-agents
           register: neutron_agents_group
@@ -697,6 +723,7 @@ erroneous failures of the post-check at the end of this playbook).
           command: pcs resource delete neutron-agents
           when: neutron_agents_group|success
     
+        # Delete individual agent resource definitions.
         - name: check if individual neutron agent resources exist
           command: crm_resource -q -r {{item}}
           with_items:
@@ -712,6 +739,7 @@ erroneous failures of the post-check at the end of this playbook).
           when: neutron_agents_group|failed and item.rc == 0
           with_items: neutron_agents.results
     
+        # Delete additional neutron resources, if they exist.
         - name: check if other neutron resources exist
           command: crm_resource -q -r {{item}}
           with_items:
@@ -733,7 +761,8 @@ erroneous failures of the post-check at the end of this playbook).
         - name: create neutron-scale resource
           command: >
             pcs resource create neutron-scale ocf:neutron:NeutronScale
-              clone globally-unique=true clone-max={{groups.controllers|length}} interleave=true
+              clone globally-unique=true clone-max={{groups.controllers|length}}
+              interleave=true
         - name: wait for neutron-scale to start on all nodes
           shell: |
             while pcs status xml |
@@ -745,6 +774,15 @@ erroneous failures of the post-check at the end of this playbook).
             pcs resource disable neutron-scale-clone
             pcs resource meta neutron-scale-clone clone-max=1
             pcs resource enable neutron-scale-clone
+    
+Note that in the following tasks we are creating new resources
+with `target-role=Stopped`.  This prevents Pacemaker from starting
+them immediately; instead, we enable the services after setting
+up all the order and colocation constraints.
+
+
+<!-- break -->
+
         - name: create new neutron-ovs-cleanup resource
           command: >
             pcs resource create neutron-ovs-cleanup
@@ -755,10 +793,6 @@ erroneous failures of the post-check at the end of this playbook).
             pcs resource create neutron-netns-cleanup
               ocf:neutron:NetnsCleanup clone interleave=true
               meta target-role=Stopped
-        # Note that in the following task we are creating new resources
-        # with target-role=Stopped.  This prevents Pacemaker from starting
-        # them immediately; instead, we enable the services after setting
-        # up all the order and colocation constraints.
         - name: create new neutron agent resources
           command: >
             pcs resource create {{item}} systemd:{{item}} clone interleave=true
@@ -782,7 +816,6 @@ erroneous failures of the post-check at the end of this playbook).
         # neutron-scale-clone.
         - name: configure neutron ordering constraints
           shell: |
-            #pcs constraint order start neutron-scale-clone then neutron-server-clone
             pcs constraint order start neutron-scale-clone then neutron-ovs-cleanup-clone
             pcs constraint order start neutron-ovs-cleanup-clone then neutron-netns-cleanup-clone
             pcs constraint order start neutron-netns-cleanup-clone then neutron-openvswitch-agent-clone
@@ -799,6 +832,8 @@ erroneous failures of the post-check at the end of this playbook).
             - neutron-l3-agent-clone
             - neutron-metadata-agent-clone
         - name: wait for neutron to become active
+          tags:
+            - verify
           shell: |
             . /root/keystonerc_admin
             timeout 300 sh -c 'until neutron net-list; do sleep 1; done'
@@ -806,6 +841,8 @@ erroneous failures of the post-check at the end of this playbook).
         # prevent erroneous failures of the post-check code at the end of the
         # playbook.
         - name: wait for neutron-l3-agent to become active
+          tags:
+            - verify
           shell: |
             . /root/keystonerc_admin
             timeout 300 sh -c 'until neutron agent-list | grep "L3 agent.*:-)"; do sleep 1; done'
