@@ -83,6 +83,8 @@ appropriate RHEL-OSP 6 package repositories.
 
 ### Kernel upgrades ###
 
+this is a test
+
 If this step installs a new kernel package, now would be a good time
 to reboot your hosts.  Because we have disabled all Pacemaker-managed
 resources, none of your OpenStack services will come up on your
