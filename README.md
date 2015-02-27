@@ -410,9 +410,9 @@ And enable the `neutron-server` resource:
 
 Delete the legacy Neutron resources:
 
-   # for rsrc in neutron-{agents,netns-cleanup,ovs-cleanup}; do
-     pcs resource delete $rsrc
-     done
+    # for rsrc in neutron-{agents,netns-cleanup,ovs-cleanup}; do
+      pcs resource delete $rsrc
+      done
 
 Create the `neutron-scale` resource:
 
