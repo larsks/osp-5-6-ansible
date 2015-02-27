@@ -81,6 +81,18 @@ install the RHEL-OSP 6 packages.  On all hosts, run:
 Note that this requires you have configured your hosts to point to the
 appropriate RHEL-OSP 6 package repositories.
 
+### Kernel upgrades ###
+
+If this step installs a new kernel package, now would be a good time
+to reboot your hosts.  Because we have disabled all Pacemaker-managed
+resources, none of your OpenStack services will come up on your
+controllers after the reboot.
+
+If you reboot the compute nodes, you will want to ensure that services
+are once again stopped on those hosts:
+
+    # openstack-service stop
+
 ## Reconfigure VIP resources
 
 RHEL-OSP 6 names VIP resources differently from RHEL-OSP 5.  In this
