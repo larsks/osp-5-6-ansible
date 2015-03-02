@@ -377,7 +377,7 @@ Add the start constraint:
 Then enable all the heat services and wait for heat to become
 active before continuing:
 
-    # for rsrc in in heat openstack-heat-{api,api-cfn,api-cloudwatch}-clone; do
+    # for rsrc in heat openstack-heat-{api,api-cfn,api-cloudwatch}-clone; do
       pcs resource enable $rsrc
       done
     
