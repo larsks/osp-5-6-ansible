@@ -22,11 +22,9 @@ to disable Puppet.  On all systems in your OpenStack deployment, run:
     # systemctl stop puppet
     # systemctl disable puppet
 
-We also put selinux into permissive mode to work around
-existing bugs in the RHEL-OSP 6 packages for RHEL 7.0.  On all your
-systems, run:
-
-    # setenforce 0
+You will need to leave Puppet disabled after the upgrade is complete,
+because we will be making a variety of manual changes to the system
+configuration and we do not want those changes erroneously reverted.
 
 In RHEL-OSP 5, some services were erroneously configured to be started by
 systemd *and* by Pacemaker.  We want services involved in our HA
